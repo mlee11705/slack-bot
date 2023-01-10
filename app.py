@@ -118,11 +118,27 @@ def mention_handler(body, say, logger):
                 }
             }
 
-        notion.pages.create(parent={"database_id": NOTION_DATABASE_ID}, properties=new_task)
-
+        # Add the new task to the database
+        created_page = notion.pages.create(parent={"database_id": NOTION_DATABASE_ID}, properties=new_task)
+        # Query the database for the created page using its id
+        query_result = notion.databases.query(
+            **{
+                "database_id": NOTION_DATABASE_ID,
+            }
+        )
+        # Get the URL of the created page
+        page_url = query_result["results"][0]["url"]
+        # Send a message in Slack to confirm that the QA ticket has been created in Notion
         say({
-            "text": "QA ticket created in Notion!"
+            "text": "QA ticket created in Notion!",
+            "attachments": [
+                {
+                    "title": "Click here to view ticket",
+                    "title_link": page_url
+                }
+            ]
         })
+
 
 if __name__ == "__main__":
         handler = SocketModeHandler(app, SLACK_APP_TOKEN)

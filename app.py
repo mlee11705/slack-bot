@@ -27,29 +27,34 @@ def mention_handler(body, say, logger):
     message_text = body['event']['text']
     message_text = re.sub(r"<@U04HUE1GBE0>", "", message_text)
     user = body['event']['user']
-    image_file = None
-    if 'files' in body['event']:
-        image_file = body['event']['files'][0]
-        file_extension = image_file['filetype']
-        file_id = image_file['id']
-        file_name = image_file['name']
+    image_files = body['event']['files']
+    file_urls = []
 
-        # Share the file publicly and get the publicly-shared URL
-        response = client.files_sharedPublicURL(file=file_id)
-        public_url = response['file']['permalink_public']
+    # If there are files in the message
+    if image_files:
+        # Share the files publicly and get the publicly-shared URLs
+        for image_file in image_files:
+            file_extension = image_file['filetype']
+            file_id = image_file['id']
+            file_name = image_file['name']
+            response = client.files_sharedPublicURL(file=file_id)
+            public_url = response['file']['permalink_public']
+            file_urls.append((file_name, public_url))
 
-        # Create a file object in Notion
-        new_file = {
+        # Create a file object in Notion for each file
+        files = []
+        for file_name, public_url in file_urls:
+            file = {
+                "type": "external",
+                "name": file_name,
+                "external": {
+                    "url": public_url
+                }
+            }
+            files.append(file)
+        new_files = {
             "Files": {
-                "files": [
-                    {
-                        "type": "external",
-                        "name": file_name,
-                        "external": {
-                            "url": public_url
-                        }
-                    }
-                ]
+                "files": files
             }
         }
 
@@ -61,8 +66,8 @@ def mention_handler(body, say, logger):
         # Get the name of the Slack user who sent the message
         response = client.users_info(user=user)
         slack_user_name = response['user']['name']
-        # Use the file id to specify the "file" property of the database entry
-        if image_file:
+        # Use the file urls to specify the "file" property of the database entry
+        if image_files:
             new_task = {
                 "title": {
                     "title": [
@@ -84,16 +89,8 @@ def mention_handler(body, say, logger):
                     ]
                 },
                 "Files": {
-                        "files": [
-                            {
-                                "type": "external",
-                                "name": file_name,
-                                "external": {
-                                    "url": public_url
-                                }
-                            }
-                        ]
-                    }
+                    "files": files
+                }
             }
         else:
             new_task = {

@@ -65,7 +65,7 @@ def mention_handler(body, say, logger):
     else:
         # Get the name of the Slack user who sent the message
         response = client.users_info(user=user)
-        slack_user_name = response['user']['name']
+        slack_user_name = response['user']['name'].title()
         # Use the file urls to specify the "file" property of the database entry
         if image_files:
             new_task = {
